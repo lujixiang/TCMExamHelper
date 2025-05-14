@@ -48,7 +48,7 @@ app.use(`${API_PREFIX}/users`, userRoutes);
 app.use(`${API_PREFIX}/stats`, statsRoutes);
 
 // 数据库连接
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://ljx:mondb123@cluster0.qdruewe.mongodb.net/tcm_exam_helper?retryWrites=true&w=majority&appName=Cluster0';
+const MONGODB_URI = process.env.MONGODB_URI ;
 
 // MongoDB 连接选项
 const mongooseOptions = {
