@@ -1,0 +1,59 @@
+{
+  "name": "tcm-exam-helper-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@ant-design/icons": "^6.0.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^5.11.16",
+    "@mui/material": "^5.17.1",
+    "@react-navigation/native": "^7.1.8",
+    "@react-navigation/stack": "^7.3.1",
+    "@reduxjs/toolkit": "^1.9.5",
+    "ajv": "^6.12.6",
+    "ajv-keywords": "^3.5.2",
+    "antd": "^5.25.1",
+    "axios": "^1.4.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-native-gesture-handler": "^2.25.0",
+    "react-native-safe-area-context": "^5.4.0",
+    "react-native-screens": "^4.10.0",
+    "react-redux": "^8.0.5",
+    "react-refresh": "^0.17.0",
+    "react-router-dom": "^6.11.1",
+    "react-scripts": "5.0.1",
+    "recharts": "^2.15.3",
+    "typescript": "^4.9.5"
+  },
+  "devDependencies": {
+    "@types/node": "^16.18.31",
+    "@types/react": "^18.2.6",
+    "@types/react-dom": "^18.2.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

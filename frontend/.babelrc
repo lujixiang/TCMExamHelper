@@ -1,0 +1,33 @@
+{
+  "presets": [
+    "@babel/preset-env",
+    "@babel/preset-react",
+    "@babel/preset-typescript"
+  ],
+  "plugins": [
+    ["module-resolver", {
+      "alias": {
+        "^react-native$": "react-native-web",
+        "^react-native-vector-icons/MaterialIcons$": "react-native-vector-icons/dist/MaterialIcons",
+        "^react-native-vector-icons/MaterialCommunityIcons$": "react-native-vector-icons/dist/MaterialCommunityIcons",
+        "^@react-native-community/async-storage$": "@react-native-async-storage/async-storage",
+        "^react-native-safe-area-context$": "react-native-safe-area-context",
+        "^react-native-screens$": "react-native-screens",
+        "^react-native-reanimated$": "react-native-reanimated",
+        "^react-native-paper$": "react-native-paper"
+      }
+    }],
+    ["react-native-web", { "commonjs": true }],
+    "@babel/plugin-proposal-export-namespace-from",
+    "@babel/plugin-transform-runtime",
+    "@babel/plugin-proposal-class-properties",
+    "@babel/plugin-proposal-object-rest-spread"
+  ],
+  "env": {
+    "development": {
+      "plugins": [
+        "@babel/plugin-transform-runtime"
+      ]
+    }
+  }
+} 
