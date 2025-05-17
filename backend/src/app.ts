@@ -1,9 +1,8 @@
 import express from 'express';
-import mongoose from 'mongoose';
+import mongoose, { Error } from 'mongoose';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import { config } from './config';
 import authRoutes from './routes/auth.routes';
 import practiceRoutes from './routes/practice.routes';
 import wrongQuestionRoutes from './routes/wrong-question.routes';
@@ -48,23 +47,14 @@ app.use(`${API_PREFIX}/users`, userRoutes);
 app.use(`${API_PREFIX}/stats`, statsRoutes);
 
 // 数据库连接
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://ljx:mondb123@cluster0.qdruewe.mongodb.net/tcm_exam_helper?retryWrites=true&w=majority&appName=Cluster0';
-
-// MongoDB 连接选项
-const mongooseOptions = {
-  // 在新版本中不需要显式指定这些选项，它们是默认值
-  // useNewUrlParser: true,
-  // useUnifiedTopology: true,
-  // useCreateIndex: true,
-  // useFindAndModify: false
-};
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/tcm_exam';
 
 mongoose.connect(MONGODB_URI)
   .then(() => {
-    console.log(`[${LOG_LEVEL}] MongoDB Atlas 数据库连接成功`);
+    console.log(`[${LOG_LEVEL}] MongoDB 数据库连接成功`);
   })
-  .catch((error) => {
-    console.error(`[${LOG_LEVEL}] MongoDB Atlas 数据库连接失败:`, error);
+  .catch((error: Error) => {
+    console.error(`[${LOG_LEVEL}] MongoDB 数据库连接失败:`, error);
     process.exit(1);
   });
 
@@ -78,6 +68,11 @@ app.get('/health', (req, res) => {
     environment: NODE_ENV,
     timestamp: new Date().toISOString()
   });
+});
+
+// 添加健康检查路由
+app.get('/healthz', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // 启动服务器
