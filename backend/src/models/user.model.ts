@@ -15,8 +15,8 @@ export interface IUser extends Document {
   _id: Types.ObjectId;
   username: string;
   email: string;
-  password?: string;  // 密码字段可选
-  role: UserRole;
+  password: string;
+  role: string;
   profile: {
     nickname: string;
     avatar: string;
@@ -29,6 +29,9 @@ export interface IUser extends Document {
     lastLoginDate: Date;
   };
   studyProgress: Map<string, Map<string, StudyProgress>>;
+  lastLoginAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -103,7 +106,8 @@ const UserSchema: Schema = new Schema({
       }
     },
     default: new Map()
-  }
+  },
+  lastLoginAt: Date
 }, {
   timestamps: true,
   toJSON: {
@@ -116,34 +120,21 @@ const UserSchema: Schema = new Schema({
 
 // 密码加密中间件
 UserSchema.pre('save', async function(next) {
-  // 只有在密码被修改时才进行加密
   if (!this.isModified('password')) return next();
-
+  
   try {
-    // 生成盐值并加密密码
     const salt = await bcrypt.genSalt(10);
-    const password = (this as any).password;
-    if (typeof password === 'string') {
-      (this as any).password = await bcrypt.hash(password, salt);
-    }
+    this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
-    next(error instanceof Error ? error : new Error('密码加密失败'));
+    next(error as Error);
   }
 });
 
 // 密码比较方法
 UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
-  try {
-    const userPassword = (this as any).password;
-    if (typeof userPassword !== 'string') {
-      throw new Error('用户密码字段不存在');
-    }
-    return await bcrypt.compare(candidatePassword, userPassword);
-  } catch (error) {
-    console.error('密码比较失败:', error);
-    return false;
-  }
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
-export const User = mongoose.model<IUser>('User', UserSchema); 
+export const User = mongoose.model<IUser>('User', UserSchema);
+export const UserModel = User; 

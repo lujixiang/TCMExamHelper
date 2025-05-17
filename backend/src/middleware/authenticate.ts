@@ -4,6 +4,10 @@ import { User } from '../models/user.model';
 
 export interface AuthRequest extends Request {
   user?: any;
+  body: any;
+  query: any;
+  params: any;
+  headers: any;
 }
 
 export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {

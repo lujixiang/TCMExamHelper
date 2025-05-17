@@ -9,78 +9,36 @@ export enum QuestionType {
 
 // 题目接口定义
 export interface IQuestion extends Document {
-  questionId: number;
   subject: string;
   chapterNo: number;
-  description: string;
-  options: {
-    A: string;
-    B: string;
-    C: string;
-    D: string;
-    E?: string;
-  };
+  content: string;
+  options: string[];
   answer: string;
   explanation?: string;
   difficulty?: number;
   tags?: string[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // 题目模式定义
-const QuestionSchema = new Schema({
-  questionId: {
-    type: Number,
-    required: true,
-    unique: true
+const questionSchema = new Schema<IQuestion>(
+  {
+    subject: { type: String, required: true },
+    chapterNo: { type: Number, required: true },
+    content: { type: String, required: true },
+    options: { type: [String], required: true },
+    answer: { type: String, required: true },
+    explanation: String,
+    difficulty: { type: Number, min: 1, max: 5 },
+    tags: [String]
   },
-  subject: {
-    type: String,
-    required: true
-  },
-  chapterNo: {
-    type: Number,
-    required: true
-  },
-  description: {
-    type: String,
-    required: true
-  },
-  options: {
-    A: {
-      type: String,
-      required: true
-    },
-    B: {
-      type: String,
-      required: true
-    },
-    C: {
-      type: String,
-      required: true
-    },
-    D: {
-      type: String,
-      required: true
-    },
-    E: String
-  },
-  answer: {
-    type: String,
-    required: true
-  },
-  explanation: String,
-  difficulty: {
-    type: Number,
-    min: 1,
-    max: 5
-  },
-  tags: [String]
-}, {
-  timestamps: true
-});
+  { timestamps: true }
+);
 
 // 创建索引
-QuestionSchema.index({ subject: 1, chapterNo: 1 });
-QuestionSchema.index({ tags: 1 });
+questionSchema.index({ subject: 1, chapterNo: 1 });
+questionSchema.index({ tags: 1 });
 
-export const Question = mongoose.model<IQuestion>('Question', QuestionSchema); 
+// 导出模型
+export const Question = mongoose.model<IQuestion>('Question', questionSchema); 
