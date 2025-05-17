@@ -47,7 +47,7 @@ app.use(`${API_PREFIX}/users`, userRoutes);
 app.use(`${API_PREFIX}/stats`, statsRoutes);
 
 // 数据库连接
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/tcm_exam';
+const MONGODB_URI = process.env.MONGODB_URI as string;
 
 mongoose.connect(MONGODB_URI)
   .then(() => {
