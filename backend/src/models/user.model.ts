@@ -17,6 +17,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: string;
+  isActive: boolean;
   profile: {
     nickname: string;
     avatar: string;
@@ -27,9 +28,10 @@ export interface IUser extends Document {
     wrongCount: number;
     streak: number;
     lastLoginDate: Date;
+    lastAnswerDate: Date;
   };
   studyProgress: Map<string, Map<string, StudyProgress>>;
-  lastLoginAt?: Date;
+  lastLoginAt: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -39,7 +41,7 @@ interface IUserDocument extends IUser {
   password: string;
 }
 
-const UserSchema: Schema = new Schema({
+const UserSchema = new Schema({
   username: {
     type: String,
     required: true,
@@ -57,12 +59,16 @@ const UserSchema: Schema = new Schema({
     type: String,
     required: true,
     minlength: 6,
-    select: false // 默认不返回密码字段
+    select: false
   },
   role: {
     type: String,
     enum: Object.values(UserRole),
     default: UserRole.USER
+  },
+  isActive: {
+    type: Boolean,
+    default: true
   },
   profile: {
     nickname: {
@@ -94,6 +100,9 @@ const UserSchema: Schema = new Schema({
     lastLoginDate: {
       type: Date,
       default: Date.now
+    },
+    lastAnswerDate: {
+      type: Date
     }
   },
   studyProgress: {
@@ -107,7 +116,10 @@ const UserSchema: Schema = new Schema({
     },
     default: new Map()
   },
-  lastLoginAt: Date
+  lastLoginAt: {
+    type: Date,
+    default: Date.now
+  }
 }, {
   timestamps: true,
   toJSON: {
@@ -135,6 +147,10 @@ UserSchema.pre('save', async function(next) {
 UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
 };
+
+// 创建索引
+UserSchema.index({ email: 1 }, { unique: true });
+UserSchema.index({ username: 1 }, { unique: true });
 
 export const User = mongoose.model<IUser>('User', UserSchema);
 export const UserModel = User; 

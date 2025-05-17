@@ -28,6 +28,7 @@ export interface IWrongQuestion extends Document {
   status: 'pending' | 'reviewing' | 'mastered';
   chapterNo: number;
   difficulty?: number;
+  isResolved: boolean;
   reviewHistory: ReviewHistory[];
   createdAt: Date;
   updatedAt: Date;
@@ -59,6 +60,7 @@ const wrongQuestionSchema = new Schema<IWrongQuestion>(
     },
     chapterNo: { type: Number, required: true },
     difficulty: Number,
+    isResolved: { type: Boolean, default: false },
     reviewHistory: [{
       date: { type: Date, default: Date.now },
       isCorrect: Boolean,

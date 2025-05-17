@@ -1,112 +1,89 @@
 import { Types } from 'mongoose';
-import { UserModel } from '../models/user.model';
+import { User } from '../models/user.model';
+import { WrongQuestion } from '../models/wrong-question.model';
+import { Question } from '../models/question.model';
 
 export class StatsService {
-  // 更新用户答题统计
-  static async updateQuestionStats(
-    userId: Types.ObjectId,
-    isCorrect: boolean
-  ): Promise<void> {
-    const updateData: any = {
-      $inc: {
-        'stats.totalQuestions': 1,
-        [`stats.${isCorrect ? 'correctQuestions' : 'wrongQuestions'}`]: 1
-      },
-      $set: {
-        'stats.lastAnswerDate': new Date()
-      }
-    };
-
-    // 获取用户当前统计信息
-    const user = await UserModel.findById(userId);
-    if (!user) {
-      throw new Error('用户不存在');
-    }
-
-    // 检查连续答题
-    const lastAnswerDate = user.stats.lastAnswerDate;
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    if (lastAnswerDate) {
-      const lastDate = new Date(lastAnswerDate);
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      
-      // 如果最后答题时间是昨天，增加连续答题天数
-      if (lastDate.getTime() >= yesterday.getTime() && lastDate.getTime() < today.getTime()) {
-        updateData.$inc['stats.dailyStreak'] = 1;
-      } 
-      // 如果最后答题时间不是昨天也不是今天，重置连续答题天数
-      else if (lastDate.getTime() < yesterday.getTime()) {
-        updateData.$set['stats.dailyStreak'] = 1;
-      }
-    } else {
-      // 第一次答题
-      updateData.$set['stats.dailyStreak'] = 1;
-    }
-
-    await UserModel.findByIdAndUpdate(userId, updateData);
-  }
-
   // 获取用户统计信息
   static async getUserStats(userId: Types.ObjectId) {
-    const user = await UserModel.findById(userId);
+    const user = await User.findById(userId);
     if (!user) {
       throw new Error('用户不存在');
     }
 
-    const { stats } = user;
-    const correctRate = stats.totalQuestions > 0
-      ? (stats.correctQuestions / stats.totalQuestions * 100).toFixed(2)
-      : '0.00';
+    const totalQuestions = await Question.countDocuments();
+    const completedQuestions = await WrongQuestion.distinct('questionId', { userId });
+    const wrongQuestions = await WrongQuestion.find({ userId, isResolved: false });
 
-    return {
-      totalQuestions: stats.totalQuestions,
-      correctQuestions: stats.correctQuestions,
-      wrongQuestions: stats.wrongQuestions,
-      correctRate: `${correctRate}%`,
-      dailyStreak: stats.dailyStreak,
-      lastAnswerDate: stats.lastAnswerDate
+    const stats = {
+      totalQuestions,
+      correctCount: completedQuestions.length - wrongQuestions.length,
+      wrongCount: wrongQuestions.length,
+      streak: user.streak || 0,
+      lastLoginDate: user.lastLoginDate || new Date(),
+      lastAnswerDate: user.lastAnswerDate || new Date()
     };
+
+    return stats;
   }
 
-  // 获取用户每日答题状态
-  static async getDailyStatus(userId: Types.ObjectId) {
-    const user = await UserModel.findById(userId);
+  // 更新用户统计信息
+  static async updateUserStats(userId: Types.ObjectId, isCorrect: boolean) {
+    const user = await User.findById(userId);
     if (!user) {
       throw new Error('用户不存在');
     }
 
-    const { stats } = user;
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    let hasAnsweredToday = false;
-    if (stats.lastAnswerDate) {
-      const lastAnswerDate = new Date(stats.lastAnswerDate);
-      hasAnsweredToday = lastAnswerDate.getTime() >= today.getTime();
+    const lastDate = user.lastAnswerDate || now;
+    const isNewDay = now.getDate() !== lastDate.getDate() ||
+                    now.getMonth() !== lastDate.getMonth() ||
+                    now.getFullYear() !== lastDate.getFullYear();
+
+    let streak = user.streak || 0;
+    if (isNewDay) {
+      streak = isCorrect ? streak + 1 : 0;
     }
 
-    return {
-      hasAnsweredToday,
-      dailyStreak: stats.dailyStreak,
-      lastAnswerDate: stats.lastAnswerDate
-    };
-  }
-
-  // 重置用户统计
-  static async resetStats(userId: Types.ObjectId): Promise<void> {
-    await UserModel.findByIdAndUpdate(userId, {
+    await User.findByIdAndUpdate(userId, {
+      $inc: {
+        [`stats.${isCorrect ? 'correctCount' : 'wrongCount'}`]: 1
+      },
       $set: {
-        stats: {
-          totalQuestions: 0,
-          correctQuestions: 0,
-          wrongQuestions: 0,
-          dailyStreak: 0,
-          lastAnswerDate: null
-        }
+        streak,
+        lastAnswerDate: now
       }
     });
+
+    return {
+      streak,
+      lastAnswerDate: now
+    };
+  }
+
+  // 获取用户学习进度
+  static async getLearningProgress(userId: Types.ObjectId) {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error('用户不存在');
+    }
+
+    const totalQuestions = await Question.countDocuments();
+    const completedQuestions = await WrongQuestion.distinct('questionId', { userId });
+    const wrongQuestions = await WrongQuestion.find({ userId, isResolved: false });
+
+    const progress = {
+      totalQuestions,
+      completedCount: completedQuestions.length,
+      correctCount: completedQuestions.length - wrongQuestions.length,
+      wrongCount: wrongQuestions.length,
+      accuracy: completedQuestions.length ? 
+        ((completedQuestions.length - wrongQuestions.length) / completedQuestions.length * 100).toFixed(2) : 
+        0,
+      streak: user.streak || 0,
+      lastAnswerDate: user.lastAnswerDate || new Date()
+    };
+
+    return progress;
   }
 } 
