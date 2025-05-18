@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { Types } from 'mongoose';
 import { IUser } from '../models/user.model';
 import { PracticeService } from '../services/practice.service';
-import { AuthRequest } from '../types/express';
+import { AuthRequest } from '../types/custom';
 import { Question } from '../models/question.model';
 import { AppError } from '../utils/error';
 

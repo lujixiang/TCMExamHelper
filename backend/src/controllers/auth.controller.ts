@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { User, IUser } from '../models/user.model';
-import { AuthRequest } from '../types/express';
+import { AuthRequest } from '../types/custom';
 import { config } from '../config/config';
 import { AppError } from '../utils/error';
 import bcrypt from 'bcryptjs';

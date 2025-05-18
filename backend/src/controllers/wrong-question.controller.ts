@@ -1,9 +1,9 @@
-import { Response, NextFunction } from '../types/express';
-import { Types } from 'mongoose';
+import { Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import { WrongQuestion } from '../models/wrong-question.model';
 import { Question } from '../models/question.model';
 import { IUser } from '../models/user.model';
-import { AuthRequest } from '../types/express';
+import { AuthRequest } from '../types/custom';
 import { WrongQuestionService } from '../services/wrong-question.service';
 import { AppError } from '../utils/error';
 
@@ -284,7 +284,7 @@ export const wrongQuestionController = {
       await WrongQuestion.updateMany(
         {
           userId,
-          questionId: { $in: questionIds.map(id => new Types.ObjectId(id)) }
+          questionId: { $in: questionIds.map(id => new mongoose.Types.ObjectId(id)) }
         },
         {
           $set: { isResolved }

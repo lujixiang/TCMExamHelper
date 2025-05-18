@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { IUser, User } from '../models/user.model';
 import { config } from '../config/config';
-import { AuthRequest } from '../types/express';
+import { AuthRequest } from '../types/custom';
 import { AppError } from '../utils/error';
 
 // JWT选项

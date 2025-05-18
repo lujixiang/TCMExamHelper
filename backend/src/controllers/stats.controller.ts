@@ -1,5 +1,5 @@
-import { Response, NextFunction } from '../types/express';
-import { AuthRequest } from '../types/express';
+import { Response, NextFunction } from 'express';
+import { AuthRequest } from '../types/custom';
 import { User } from '../models/user.model';
 import { Question } from '../models/question.model';
 import { WrongQuestion } from '../models/wrong-question.model';

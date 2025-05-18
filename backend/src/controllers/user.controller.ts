@@ -1,7 +1,7 @@
-import { Response, NextFunction } from '../types/express';
+import { Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import { User } from '../models/user.model';
-import { AuthRequest } from '../types/express';
+import { AuthRequest } from '../types/custom';
 import { AppError } from '../utils/error';
 
 class UserController {
