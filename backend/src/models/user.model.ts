@@ -124,8 +124,12 @@ const UserSchema = new Schema<IUser>({
   },
   name: {
     type: String,
-    required: true,
-    trim: true
+    required: false,
+    trim: true,
+    default: function() {
+      // @ts-ignore
+      return this.username || '';
+    }
   }
 }, {
   timestamps: true,

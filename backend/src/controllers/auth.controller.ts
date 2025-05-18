@@ -137,6 +137,11 @@ class AuthController {
         throw new AppError('密码错误', 401);
       }
 
+      // 确保用户有name字段
+      if (!user.name) {
+        user.name = user.username; // 使用用户名作为默认name
+      }
+
       // 更新最后登录时间
       user.lastLoginAt = new Date();
       await user.save();

@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 
 // 自定义错误类
 export class AppError extends Error {
@@ -14,6 +15,27 @@ export class AppError extends Error {
 
 // 错误响应格式化
 const formatError = (err: AppError | Error) => {
+  // 处理MongoDB验证错误
+  if (err instanceof mongoose.Error.ValidationError) {
+    const messages = Object.values(err.errors).map(val => val.message);
+    return {
+      success: false,
+      message: messages.join(', '),
+      statusCode: 400,
+      isOperational: true
+    };
+  }
+
+  // 处理Mongoose重复键错误
+  if (err.name === 'MongoServerError' && (err as any).code === 11000) {
+    return {
+      success: false,
+      message: '此电子邮件或用户名已被注册',
+      statusCode: 400,
+      isOperational: true
+    };
+  }
+  
   if (err instanceof AppError) {
     return {
       success: false,
