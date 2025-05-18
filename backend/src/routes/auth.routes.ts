@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authController } from '../controllers/auth.controller';
+import { noCacheMiddleware } from '../middleware/cache.middleware';
 
 const router = Router();
 
@@ -9,8 +10,8 @@ router.get('/test', (req, res) => {
 });
 
 // 检查用户名和邮箱可用性
-router.get('/check-username', authController.checkUsername);
-router.get('/check-email', authController.checkEmail);
+router.get('/check-username', noCacheMiddleware, authController.checkUsername);
+router.get('/check-email', noCacheMiddleware, authController.checkEmail);
 
 // 用户注册
 router.post('/register', authController.register);

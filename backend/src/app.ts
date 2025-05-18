@@ -20,8 +20,15 @@ mongoose.connect(config.mongoUri)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// 基础中间件
-app.use(cors());
+// 配置CORS
+app.use(cors({
+  origin: config.corsOrigin || '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  exposedHeaders: ['Content-Length', 'X-Content-Type-Options'],
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(loggerMiddleware);

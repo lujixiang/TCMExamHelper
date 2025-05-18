@@ -329,9 +329,18 @@ class AuthController {
         throw new AppError('用户名参数无效', 400);
       }
 
+      console.log('检查用户名:', username);
       const existingUser = await User.findOne({ username });
+      console.log('数据库查询结果:', !!existingUser);
       
-      res.json({
+      // 设置禁止缓存的头部
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate', 
+        'Pragma': 'no-cache', 
+        'Expires': '0'
+      });
+      
+      res.status(200).json({
         success: true,
         available: !existingUser
       });
@@ -349,9 +358,18 @@ class AuthController {
         throw new AppError('邮箱参数无效', 400);
       }
 
+      console.log('检查邮箱:', email);
       const existingUser = await User.findOne({ email });
+      console.log('数据库查询结果:', !!existingUser);
       
-      res.json({
+      // 设置禁止缓存的头部
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate', 
+        'Pragma': 'no-cache', 
+        'Expires': '0'
+      });
+      
+      res.status(200).json({
         success: true,
         available: !existingUser
       });

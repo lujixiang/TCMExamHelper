@@ -59,10 +59,18 @@ const Register: React.FC = () => {
       
       // 尝试调用API，但如果失败也不影响用户体验
       try {
-        const response = await api.get(`/auth/check-username?username=${encodeURIComponent(username)}`, {
-          timeout: 2000 // 设置较短的超时时间
+        // 添加时间戳防止缓存
+        const timestamp = new Date().getTime();
+        const response = await api.get(`/auth/check-username?username=${encodeURIComponent(username)}&_t=${timestamp}`, {
+          timeout: 2000, // 设置较短的超时时间
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
         });
-        if (response.data && response.data.success === false) {
+        console.log('用户名检查响应:', response.data);
+        if (response.data && response.data.available === false) {
           setErrors(prev => ({
             ...prev,
             username: '此用户名已被注册'
@@ -94,10 +102,18 @@ const Register: React.FC = () => {
       
       // 尝试调用API，但如果失败也不影响用户体验
       try {
-        const response = await api.get(`/auth/check-email?email=${encodeURIComponent(email)}`, {
-          timeout: 2000 // 设置较短的超时时间
+        // 添加时间戳防止缓存
+        const timestamp = new Date().getTime();
+        const response = await api.get(`/auth/check-email?email=${encodeURIComponent(email)}&_t=${timestamp}`, {
+          timeout: 2000, // 设置较短的超时时间
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
         });
-        if (response.data && response.data.success === false) {
+        console.log('邮箱检查响应:', response.data);
+        if (response.data && response.data.available === false) {
           setErrors(prev => ({
             ...prev,
             email: '此邮箱已被注册'
