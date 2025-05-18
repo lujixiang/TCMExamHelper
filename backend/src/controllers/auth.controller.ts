@@ -117,10 +117,16 @@ class AuthController {
   // 用户登录
   async login(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const { email, password } = req.body;
+      const { username, password } = req.body;
 
-      // 查找用户
-      const user = await User.findOne({ email }).select('+password');
+      // 查找用户（支持通过email或username登录）
+      const user = await User.findOne({ 
+        $or: [
+          { email: username },
+          { username: username }
+        ]
+      }).select('+password');
+      
       if (!user) {
         throw new AppError('用户不存在', 401);
       }
@@ -130,6 +136,10 @@ class AuthController {
       if (!isMatch) {
         throw new AppError('密码错误', 401);
       }
+
+      // 更新最后登录时间
+      user.lastLoginAt = new Date();
+      await user.save();
 
       // 生成 JWT
       const token = jwt.sign(
