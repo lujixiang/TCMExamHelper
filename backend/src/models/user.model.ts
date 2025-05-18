@@ -34,6 +34,7 @@ export interface IUser extends Document {
   lastLoginAt: Date;
   createdAt: Date;
   updatedAt: Date;
+  name: string;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -119,6 +120,11 @@ const UserSchema = new Schema({
   lastLoginAt: {
     type: Date,
     default: Date.now
+  },
+  name: {
+    type: String,
+    required: true,
+    trim: true
   }
 }, {
   timestamps: true,
@@ -138,8 +144,8 @@ UserSchema.pre('save', async function(next) {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
     next();
-  } catch (error) {
-    next(error as Error);
+  } catch (error: any) {
+    next(error);
   }
 });
 

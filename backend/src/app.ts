@@ -2,12 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import { config } from './config/config';
-import { authRoutes } from './routes/auth.routes';
-import { userRoutes } from './routes/user.routes';
-import { practiceRoutes } from './routes/practice.routes';
-import { subjectRoutes } from './routes/subject.routes';
-import { wrongQuestionRoutes } from './routes/wrong-question.routes';
-import { statsRoutes } from './routes/stats.routes';
+import authRoutes from './routes/auth.routes';
+import userRoutes from './routes/user.routes';
+import practiceRoutes from './routes/practice.routes';
+import subjectRoutes from './routes/subject.routes';
+import wrongQuestionRoutes from './routes/wrong-question.routes';
+import statsRoutes from './routes/stats.routes';
 import { errorHandler } from './middleware/error.middleware';
 import { requestLogger } from './middleware/logger.middleware';
 

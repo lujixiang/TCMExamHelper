@@ -3,48 +3,28 @@ import jwt from 'jsonwebtoken';
 import { IUser, User } from '../models/user.model';
 import { config } from '../config/config';
 import { AuthRequest } from '../types/express';
+import { AppError } from '../utils/error';
 
 // JWT选项
-export const jwtOptions = {
-  expiresIn: config.jwtExpiresIn
+export const jwtConfig = {
+  secret: config.jwtSecret,
+  expiresIn: '7d'
 };
 
 // 认证中间件
-export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const auth = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-
+    const token = req.headers.authorization?.split(' ')[1];
+    
     if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: '未提供认证令牌'
-      });
+      throw new AppError('未提供认证令牌', 401);
     }
 
-    const decoded = jwt.verify(token, config.jwtSecret) as { userId: string };
-    const user = await User.findById(decoded.userId);
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: '用户不存在'
-      });
-    }
-
-    if (!user.isActive) {
-      return res.status(401).json({
-        success: false,
-        message: '用户账号已被禁用'
-      });
-    }
-
-    req.user = user;
+    const decoded = jwt.verify(token, jwtConfig.secret);
+    req.user = decoded as any;
     next();
   } catch (error) {
-    res.status(401).json({
-      success: false,
-      message: '无效的认证令牌'
-    });
+    next(new AppError('无效的认证令牌', 401));
   }
 };
 

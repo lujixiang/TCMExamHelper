@@ -1,14 +1,17 @@
 import { Router } from 'express';
-import { userController } from '../controllers/user.controller';
 import { auth } from '../middleware/auth.middleware';
+import * as userController from '../controllers/user.controller';
 
 const router = Router();
 
 // 所有路由都需要认证
 router.use(auth);
 
-// 更新用户资料
+router.post('/register', userController.register);
+router.post('/login', userController.login);
+router.get('/me', userController.getCurrentUser);
 router.put('/profile', userController.updateProfile);
+router.get('/:id', userController.getUserById);
 
 // 更新密码
 router.put('/password', userController.updatePassword);
