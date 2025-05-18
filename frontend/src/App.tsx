@@ -1,13 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { theme } from './theme';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import { Layout } from './components/Layout';
-import { RootState } from './store';
+import { RootState, AppDispatch } from './store';
 import DashboardPage from './pages/DashboardPage';
 import PracticePage from './pages/practice/PracticePage';
 import ProfilePage from './pages/ProfilePage';
@@ -21,6 +21,7 @@ import WrongQuestions from './pages/wrong-questions/WrongQuestions';
 
 const App: React.FC = () => {
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
+  const dispatch = useDispatch<AppDispatch>();
 
   return (
     <ThemeProvider theme={theme}>
