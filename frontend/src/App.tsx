@@ -5,6 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { useSelector } from 'react-redux';
 import { theme } from './theme';
 import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
 import { Layout } from './components/Layout';
 import { RootState } from './store';
 import DashboardPage from './pages/DashboardPage';
@@ -39,6 +40,10 @@ const App: React.FC = () => {
           <Route
             path="/login"
             element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
+          />
+          <Route
+            path="/register"
+            element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register />}
           />
           {isAuthenticated ? (
             <Route element={<Layout />}>
