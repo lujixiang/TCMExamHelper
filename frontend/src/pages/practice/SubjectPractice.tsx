@@ -112,7 +112,7 @@ const SubjectPractice: React.FC = () => {
       });
 
       const encodedSubject = encodeURIComponent(selectedSubject);
-      const response = await api.get(`/practice/topic/${encodedSubject}`, {
+      const response = await api.get(`/practice/${encodedSubject}/topic`, {
         params: {
           count: questionCount
         }
