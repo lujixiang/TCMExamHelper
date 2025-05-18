@@ -1,4 +1,5 @@
-import express, { Express, Request, Response } from './types/express';
+import express from 'express';
+import { Express, Request, Response } from './types/express.d';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import { config } from './config/config';
