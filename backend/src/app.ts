@@ -35,6 +35,23 @@ app.use(`${apiPrefix}/subjects`, authMiddleware, subjectRoutes);
 app.use(`${apiPrefix}/wrong-questions`, authMiddleware, wrongQuestionRoutes);
 app.use(`${apiPrefix}/stats`, authMiddleware, statsRoutes);
 
+// 根路径处理
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).json({
+    success: true,
+    message: '中医考试助手API服务',
+    version: '1.0.0',
+    endpoints: {
+      auth: `${apiPrefix}/auth`,
+      users: `${apiPrefix}/users`,
+      practice: `${apiPrefix}/practice`,
+      subjects: `${apiPrefix}/subjects`,
+      wrongQuestions: `${apiPrefix}/wrong-questions`,
+      stats: `${apiPrefix}/stats`
+    }
+  });
+});
+
 // 404处理
 app.use((req: Request, res: Response) => {
   res.status(404).json({

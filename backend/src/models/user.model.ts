@@ -157,9 +157,5 @@ UserSchema.methods.comparePassword = async function(candidatePassword: string): 
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// 创建索引
-UserSchema.index({ email: 1 }, { unique: true });
-UserSchema.index({ username: 1 }, { unique: true });
-
 export const User = mongoose.model<IUser>('User', UserSchema);
 export const UserModel = User; 
