@@ -319,9 +319,62 @@ class AuthController {
       next(error);
     }
   }
+
+  // 检查用户名是否可用
+  async checkUsername(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { username } = req.query;
+      
+      if (!username || typeof username !== 'string') {
+        throw new AppError('用户名参数无效', 400);
+      }
+
+      const existingUser = await User.findOne({ username });
+      
+      res.json({
+        success: true,
+        available: !existingUser
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // 检查邮箱是否可用
+  async checkEmail(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.query;
+      
+      if (!email || typeof email !== 'string') {
+        throw new AppError('邮箱参数无效', 400);
+      }
+
+      const existingUser = await User.findOne({ email });
+      
+      res.json({
+        success: true,
+        available: !existingUser
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
-export const authController = new AuthController();
+// 导出控制器实例
+const controller = new AuthController();
+export const authController = {
+  register: controller.register.bind(controller),
+  login: controller.login.bind(controller),
+  refreshToken: controller.refreshToken.bind(controller),
+  changePassword: controller.changePassword.bind(controller),
+  resetPasswordRequest: controller.resetPasswordRequest.bind(controller),
+  resetPassword: controller.resetPassword.bind(controller),
+  getCurrentUser: controller.getCurrentUser.bind(controller),
+  updateProfile: controller.updateProfile.bind(controller),
+  checkUsername: controller.checkUsername.bind(controller),
+  checkEmail: controller.checkEmail.bind(controller)
+};
 
 // 获取当前用户信息
 export const getCurrentUser = async (req: AuthRequest, res: Response, next: NextFunction) => {

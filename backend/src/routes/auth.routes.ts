@@ -3,6 +3,15 @@ import { authController } from '../controllers/auth.controller';
 
 const router = Router();
 
+// 简单的测试路由
+router.get('/test', (req, res) => {
+  res.json({ success: true, message: '路由测试成功' });
+});
+
+// 检查用户名和邮箱可用性
+router.get('/check-username', authController.checkUsername);
+router.get('/check-email', authController.checkEmail);
+
 // 用户注册
 router.post('/register', authController.register);
 
