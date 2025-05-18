@@ -2,10 +2,10 @@
   "name": "tcm-exam-helper-backend",
   "version": "1.0.0",
   "description": "TCM Exam Helper Backend API",
-  "main": "dist/app.js",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "node dist/app.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
+    "start": "node dist/server.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "test": "jest",
     "check-db": "ts-node src/scripts/checkDb.ts"
