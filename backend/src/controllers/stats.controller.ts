@@ -1,71 +1,128 @@
-import { Response, NextFunction } from 'express';
-import { AuthRequest } from '../middleware/auth.middleware';
-import { StatsService } from '../services/stats.service';
+import { Response, NextFunction } from '../types/express';
+import { AuthRequest } from '../types/express';
+import { User } from '../models/user.model';
+import { Question } from '../models/question.model';
+import { WrongQuestion } from '../models/wrong-question.model';
+import { AppError } from '../utils/error';
 
-export const statsController = {
-  // 获取用户统计信息
-  getUserStats: async (req: AuthRequest, res: Response, next: NextFunction) => {
+class StatsController {
+  // 获取学习统计
+  async getStudyStats(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const userId = req.user?._id;
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: '未授权访问'
-        });
+      const userId = req.user?.id;
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new AppError('用户不存在', 404);
       }
 
-      const stats = await StatsService.getUserStats(userId);
-      
       res.json({
         success: true,
-        data: stats
-      });
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  // 获取每日答题状态
-  getDailyStatus: async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-      const userId = req.user?._id;
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: '未授权访问'
-        });
-      }
-
-      const dailyStatus = await StatsService.getDailyStatus(userId);
-      
-      res.json({
-        success: true,
-        data: dailyStatus
-      });
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  // 重置用户统计
-  resetStats: async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-      const userId = req.user?._id;
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: '未授权访问'
-        });
-      }
-
-      await StatsService.resetStats(userId);
-      
-      res.json({
-        success: true,
-        message: '统计数据已重置'
+        data: {
+          totalQuestions: user.stats.totalQuestions,
+          correctCount: user.stats.correctCount,
+          wrongCount: user.stats.wrongCount,
+          streak: user.stats.streak,
+          lastLoginAt: user.stats.lastLoginAt,
+          lastAnswerAt: user.stats.lastAnswerAt
+        }
       });
     } catch (error) {
       next(error);
     }
   }
-}; 
+
+  // 获取每日统计
+  async getDailyStats(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.id;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const dailyStats = await WrongQuestion.aggregate([
+        {
+          $match: {
+            userId,
+            lastWrongDate: { $gte: today }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalWrong: { $sum: 1 },
+            resolvedCount: {
+              $sum: { $cond: [{ $eq: ['$isResolved', true] }, 1, 0] }
+            }
+          }
+        }
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          date: today,
+          ...dailyStats[0]
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // 获取科目统计
+  async getSubjectStats(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.id;
+
+      const subjectStats = await WrongQuestion.aggregate([
+        { $match: { userId } },
+        {
+          $group: {
+            _id: '$subject',
+            totalWrong: { $sum: 1 },
+            resolvedCount: {
+              $sum: { $cond: [{ $eq: ['$isResolved', true] }, 1, 0] }
+            }
+          }
+        }
+      ]);
+
+      res.json({
+        success: true,
+        data: subjectStats
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // 重置统计
+  async resetStats(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.id;
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new AppError('用户不存在', 404);
+      }
+
+      user.stats = {
+        totalQuestions: 0,
+        correctCount: 0,
+        wrongCount: 0,
+        streak: 0,
+        lastLoginAt: user.stats.lastLoginAt,
+        lastAnswerAt: null
+      };
+
+      await user.save();
+
+      res.json({
+        success: true,
+        message: '统计已重置'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+
+export const statsController = new StatsController(); 

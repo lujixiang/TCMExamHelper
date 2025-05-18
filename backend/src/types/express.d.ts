@@ -1,4 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
+import express from 'express';
+import { Request as ExpressRequest, Response as ExpressResponse, NextFunction as ExpressNextFunction, Router, Express as ExpressApp } from 'express';
 import { IUser } from '../models/user.model';
 import { JwtPayload } from 'jsonwebtoken';
 
@@ -12,12 +13,15 @@ declare global {
 }
 
 // 导出自定义的请求类型
-export interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-  } & JwtPayload;
-  header(name: string): string | undefined;
+export interface AuthRequest extends ExpressRequest {
+  user?: IUser;
+  body: any;
+  params: any;
+  query: any;
+  headers: {
+    authorization?: string;
+    [key: string]: string | undefined;
+  };
 }
 
 export interface ErrorResponse {
@@ -26,4 +30,9 @@ export interface ErrorResponse {
   error?: any;
 }
 
-export { Request, Response, NextFunction }; 
+export type Request = ExpressRequest;
+export type Response = ExpressResponse;
+export type NextFunction = ExpressNextFunction;
+export type Express = ExpressApp;
+export { Router };
+export default express; 

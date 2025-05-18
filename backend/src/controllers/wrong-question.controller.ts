@@ -1,10 +1,11 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from '../types/express';
 import { Types } from 'mongoose';
 import { WrongQuestion } from '../models/wrong-question.model';
 import { Question } from '../models/question.model';
 import { IUser } from '../models/user.model';
-import { AuthRequest } from '../middleware/auth.middleware';
+import { AuthRequest } from '../types/express';
 import { WrongQuestionService } from '../services/wrong-question.service';
+import { AppError } from '../utils/error';
 
 export const wrongQuestionController = {
   // 获取错题列表
@@ -72,7 +73,7 @@ export const wrongQuestionController = {
           },
           correctAnswer: question?.answer || '',
           wrongCount: wq.wrongCount,
-          lastWrongTime: wq.lastWrongTime,
+          lastWrongDate: wq.lastWrongDate,
           isResolved: wq.isResolved,
           chapterNo: question?.chapterNo || wq.chapterNo
         };
@@ -368,6 +369,58 @@ export const wrongQuestionController = {
       res.json({
         success: true,
         data: questions
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // 获取错题详情
+  getWrongQuestionById: async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.id;
+
+      const question = await WrongQuestion.findOne({ _id: id, userId });
+      if (!question) {
+        throw new AppError('错题不存在', 404);
+      }
+
+      res.json({
+        success: true,
+        data: question
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // 更新错题状态
+  updateWrongQuestion: async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.id;
+      const { status, isResolved } = req.body;
+
+      const question = await WrongQuestion.findOneAndUpdate(
+        { _id: id, userId },
+        {
+          $set: {
+            status,
+            isResolved,
+            resolvedDate: isResolved ? new Date() : undefined
+          }
+        },
+        { new: true }
+      );
+
+      if (!question) {
+        throw new AppError('错题不存在', 404);
+      }
+
+      res.json({
+        success: true,
+        data: question
       });
     } catch (error) {
       next(error);

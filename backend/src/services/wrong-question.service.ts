@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
-import { WrongQuestionModel } from '../models/wrong-question.model';
-import { QuestionModel } from '../models/question.model';
+import { WrongQuestion } from '../models/wrong-question.model';
+import { Question } from '../models/question.model';
 import { StatsService } from './stats.service';
 
 export class WrongQuestionService {
@@ -10,26 +10,26 @@ export class WrongQuestionService {
     questionId: Types.ObjectId,
     wrongAnswer: string
   ): Promise<void> {
-    const question = await QuestionModel.findById(questionId);
+    const question = await Question.findById(questionId);
     if (!question) {
       throw new Error('题目不存在');
     }
 
-    const existingRecord = await WrongQuestionModel.findOne({
+    const existingRecord = await WrongQuestion.findOne({
       userId,
       questionId
     });
 
     if (existingRecord) {
       // 更新已存在的错题记录
-      await WrongQuestionModel.findByIdAndUpdate(existingRecord._id, {
+      await WrongQuestion.findByIdAndUpdate(existingRecord._id, {
         $inc: { attemptCount: 1 },
         wrongAnswer,
         lastAttemptDate: new Date()
       });
     } else {
       // 创建新的错题记录
-      await WrongQuestionModel.create({
+      await WrongQuestion.create({
         userId,
         questionId,
         subject: question.subject,
@@ -41,7 +41,7 @@ export class WrongQuestionService {
     }
 
     // 更新用户统计信息
-    await StatsService.updateQuestionStats(userId, false);
+    await StatsService.updateUserStats(userId, false);
   }
 
   // 获取用户的错题列表
@@ -71,10 +71,10 @@ export class WrongQuestionService {
     if (chapterNo) query.chapterNo = chapterNo;
 
     // 计算总数
-    const total = await WrongQuestionModel.countDocuments(query);
+    const total = await WrongQuestion.countDocuments(query);
 
     // 获取错题记录
-    const wrongQuestions = await WrongQuestionModel.find(query)
+    const wrongQuestions = await WrongQuestion.find(query)
       .sort({ [sortBy]: order === 'desc' ? -1 : 1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -93,7 +93,7 @@ export class WrongQuestionService {
 
   // 获取错题统计信息
   static async getWrongQuestionStats(userId: Types.ObjectId) {
-    const stats = await WrongQuestionModel.aggregate([
+    const stats = await WrongQuestion.aggregate([
       { $match: { userId: new Types.ObjectId(userId) } },
       {
         $group: {
@@ -116,7 +116,7 @@ export class WrongQuestionService {
     userId: Types.ObjectId,
     questionId: Types.ObjectId
   ): Promise<void> {
-    const result = await WrongQuestionModel.deleteOne({
+    const result = await WrongQuestion.deleteOne({
       userId,
       questionId
     });
@@ -134,7 +134,7 @@ export class WrongQuestionService {
     const query: any = { userId };
     if (subject) query.subject = subject;
 
-    await WrongQuestionModel.deleteMany(query);
+    await WrongQuestion.deleteMany(query);
   }
 
   // 获取高频错题
@@ -142,7 +142,7 @@ export class WrongQuestionService {
     userId: Types.ObjectId,
     limit: number = 10
   ) {
-    return WrongQuestionModel.find({ userId })
+    return WrongQuestion.find({ userId })
       .sort({ attemptCount: -1 })
       .limit(limit)
       .populate('questionId');
@@ -153,7 +153,7 @@ export class WrongQuestionService {
     userId: Types.ObjectId,
     limit: number = 10
   ) {
-    return WrongQuestionModel.find({ userId })
+    return WrongQuestion.find({ userId })
       .sort({ lastAttemptDate: -1 })
       .limit(limit)
       .populate('questionId');

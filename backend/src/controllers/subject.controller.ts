@@ -1,13 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
+import { AuthRequest } from '../types/express';
 import { Question } from '../models/question.model';
-
-interface AuthRequest extends Request {
-  user?: {
-    _id: string;
-    username: string;
-    email: string;
-  };
-}
+import { AppError } from '../utils/error';
 
 class SubjectController {
   // 获取所有科目列表
@@ -45,6 +39,60 @@ class SubjectController {
       res.json({
         success: true,
         data: { count }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // 获取科目详情
+  async getSubjectDetail(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { subject } = req.params;
+      
+      const totalQuestions = await Question.countDocuments({ subject });
+      const questionsByDifficulty = await Question.aggregate([
+        { $match: { subject } },
+        {
+          $group: {
+            _id: '$difficulty',
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          subject,
+          totalQuestions,
+          questionsByDifficulty
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // 获取科目章节
+  async getSubjectChapters(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { subject } = req.params;
+      
+      const chapters = await Question.aggregate([
+        { $match: { subject } },
+        {
+          $group: {
+            _id: '$chapterNo',
+            questionCount: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: 1 } }
+      ]);
+
+      res.json({
+        success: true,
+        data: chapters
       });
     } catch (error) {
       next(error);

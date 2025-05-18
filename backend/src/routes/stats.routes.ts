@@ -1,19 +1,22 @@
-import express from 'express';
+import { Router } from '../types/express';
 import { statsController } from '../controllers/stats.controller';
-import { auth } from '../middleware/auth.middleware';
+import { authMiddleware } from '../middleware/auth.middleware';
 
-const router = express.Router();
+const router = Router();
 
-// 所有路由都需要认证
-router.use(auth);
+// 需要认证的路由
+router.use(authMiddleware);
 
-// 获取用户统计信息
-router.get('/', statsController.getUserStats);
+// 获取学习统计
+router.get('/', statsController.getStudyStats);
 
-// 获取每日答题状态
-router.get('/daily', statsController.getDailyStatus);
+// 获取每日统计
+router.get('/daily', statsController.getDailyStats);
 
-// 重置用户统计
+// 获取科目统计
+router.get('/subjects', statsController.getSubjectStats);
+
+// 重置统计
 router.post('/reset', statsController.resetStats);
 
-export default router; 
+export const statsRoutes = router; 

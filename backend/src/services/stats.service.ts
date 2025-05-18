@@ -19,9 +19,9 @@ export class StatsService {
       totalQuestions,
       correctCount: completedQuestions.length - wrongQuestions.length,
       wrongCount: wrongQuestions.length,
-      streak: user.streak || 0,
-      lastLoginDate: user.lastLoginDate || new Date(),
-      lastAnswerDate: user.lastAnswerDate || new Date()
+      streak: user.stats.streak || 0,
+      lastLoginAt: user.stats.lastLoginAt || new Date(),
+      lastAnswerAt: user.stats.lastAnswerAt || new Date()
     };
 
     return stats;
@@ -35,12 +35,12 @@ export class StatsService {
     }
 
     const now = new Date();
-    const lastDate = user.lastAnswerDate || now;
+    const lastDate = user.stats.lastAnswerAt || now;
     const isNewDay = now.getDate() !== lastDate.getDate() ||
                     now.getMonth() !== lastDate.getMonth() ||
                     now.getFullYear() !== lastDate.getFullYear();
 
-    let streak = user.streak || 0;
+    let streak = user.stats.streak || 0;
     if (isNewDay) {
       streak = isCorrect ? streak + 1 : 0;
     }
@@ -50,14 +50,14 @@ export class StatsService {
         [`stats.${isCorrect ? 'correctCount' : 'wrongCount'}`]: 1
       },
       $set: {
-        streak,
-        lastAnswerDate: now
+        'stats.streak': streak,
+        'stats.lastAnswerAt': now
       }
     });
 
     return {
       streak,
-      lastAnswerDate: now
+      lastAnswerAt: now
     };
   }
 
@@ -80,8 +80,8 @@ export class StatsService {
       accuracy: completedQuestions.length ? 
         ((completedQuestions.length - wrongQuestions.length) / completedQuestions.length * 100).toFixed(2) : 
         0,
-      streak: user.streak || 0,
-      lastAnswerDate: user.lastAnswerDate || new Date()
+      streak: user.stats.streak || 0,
+      lastAnswerAt: user.stats.lastAnswerAt || new Date()
     };
 
     return progress;

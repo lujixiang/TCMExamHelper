@@ -1,81 +1,188 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from '../types/express';
 import bcrypt from 'bcryptjs';
-import { User, IUser } from '../models/user.model';
-import { WrongQuestion } from '../models/wrong-question.model';
-
-interface AuthRequest extends Request {
-  user?: IUser;
-}
+import { User } from '../models/user.model';
+import { AuthRequest } from '../types/express';
+import { AppError } from '../utils/error';
 
 class UserController {
-  // 更新用户资料
-  async updateProfile(req: AuthRequest, res: Response, next: NextFunction) {
+  // 注册新用户
+  async register(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const userId = req.user?._id;
-      const { nickname, avatar } = req.body;
+      const { username, email, password, name } = req.body;
 
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: '未授权访问'
-        });
+      const existingUser = await User.findOne({
+        $or: [{ email }, { username }]
+      });
+
+      if (existingUser) {
+        throw new AppError('用户名或邮箱已被使用', 400);
       }
 
-      const updatedUser = await User.findByIdAndUpdate(
-        userId,
-        { 
-          'profile.nickname': nickname,
-          'profile.avatar': avatar
-        },
-        { new: true, select: '-password' }
-      );
+      const user = await User.create({
+        username,
+        email,
+        password,
+        name
+      });
 
-      res.json({
+      res.status(201).json({
         success: true,
-        data: updatedUser
+        data: {
+          user: {
+            id: user._id,
+            username: user.username,
+            email: user.email
+          }
+        }
       });
     } catch (error) {
       next(error);
     }
   }
 
-  // 更新密码
-  async updatePassword(req: AuthRequest, res: Response, next: NextFunction) {
+  // 用户登录
+  async login(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const userId = req.user?._id;
-      const { currentPassword, newPassword } = req.body;
+      const { email, password } = req.body;
 
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: '未授权访问'
-        });
+      const user = await User.findOne({ email }).select('+password');
+      if (!user) {
+        throw new AppError('用户不存在', 401);
       }
 
-      // 验证当前密码
+      const isMatch = await user.comparePassword(password);
+      if (!isMatch) {
+        throw new AppError('密码错误', 401);
+      }
+
+      // 更新最后登录时间
+      user.lastLoginAt = new Date();
+      await user.save();
+
+      res.json({
+        success: true,
+        data: {
+          user: {
+            id: user._id,
+            username: user.username,
+            email: user.email
+          }
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // 获取当前登录用户信息
+  async getCurrentUser(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?._id;
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new AppError('用户不存在', 404);
+      }
+
+      res.json({
+        success: true,
+        data: {
+          user: {
+            id: user._id,
+            username: user.username,
+            email: user.email,
+            profile: user.profile
+          }
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // 更新用户资料
+  async updateProfile(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { nickname, avatar } = req.body;
+      const userId = req.user?._id;
+
+      const user = await User.findByIdAndUpdate(
+        userId,
+        {
+          $set: {
+            'profile.nickname': nickname,
+            'profile.avatar': avatar
+          }
+        },
+        { new: true }
+      );
+
+      if (!user) {
+        throw new AppError('用户不存在', 404);
+      }
+
+      res.json({
+        success: true,
+        data: {
+          user: {
+            id: user._id,
+            username: user.username,
+            email: user.email,
+            profile: user.profile
+          }
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // 修改密码
+  async updatePassword(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      const userId = req.user?._id;
+
       const user = await User.findById(userId).select('+password');
       if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: '用户不存在'
-        });
+        throw new AppError('用户不存在', 404);
       }
 
       const isMatch = await user.comparePassword(currentPassword);
       if (!isMatch) {
-        return res.status(400).json({
-          success: false,
-          message: '当前密码错误'
-        });
+        throw new AppError('当前密码错误', 401);
       }
 
-      // 更新密码
       user.password = newPassword;
       await user.save();
 
       res.json({
         success: true,
-        message: '密码更新成功'
+        message: '密码修改成功'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // 获取用户详情
+  async getUserById(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const user = await User.findById(id);
+      if (!user) {
+        throw new AppError('用户不存在', 404);
+      }
+
+      res.json({
+        success: true,
+        data: {
+          user: {
+            id: user._id,
+            username: user.username,
+            email: user.email,
+            profile: user.profile
+          }
+        }
       });
     } catch (error) {
       next(error);
@@ -86,25 +193,21 @@ class UserController {
   async getStudyStats(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const userId = req.user?._id;
-
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: '未授权访问'
-        });
-      }
-
       const user = await User.findById(userId);
       if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: '用户不存在'
-        });
+        throw new AppError('用户不存在', 404);
       }
 
       res.json({
         success: true,
-        data: user.stats
+        data: {
+          stats: {
+            totalQuestions: user.stats.totalQuestions,
+            correctCount: user.stats.correctCount,
+            wrongCount: user.stats.wrongCount,
+            streak: user.stats.streak || 0
+          }
+        }
       });
     } catch (error) {
       next(error);
@@ -115,43 +218,14 @@ class UserController {
   async getStudyStatsDetail(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const userId = req.user?._id;
-
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: '未授权访问'
-        });
-      }
-
-      const stats = await WrongQuestion.aggregate([
-        { $match: { userId } },
-        { $group: {
-          _id: {
-            subject: '$subject',
-            chapterNo: '$chapterNo'
-          },
-          totalWrong: { $sum: 1 },
-          resolvedCount: {
-            $sum: { $cond: ['$isResolved', 1, 0] }
-          }
-        }},
-        { $group: {
-          _id: '$_id.subject',
-          chapters: {
-            $push: {
-              chapterNo: '$_id.chapterNo',
-              totalWrong: '$totalWrong',
-              resolvedCount: '$resolvedCount'
-            }
-          },
-          totalWrong: { $sum: '$totalWrong' },
-          totalResolved: { $sum: '$resolvedCount' }
-        }}
-      ]);
-
+      // TODO: 实现详细统计数据查询
       res.json({
         success: true,
-        data: stats
+        data: {
+          stats: {
+            // 详细统计数据
+          }
+        }
       });
     } catch (error) {
       next(error);
@@ -161,32 +235,47 @@ class UserController {
   // 更新学习进度
   async updateStudyProgress(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const userId = req.user?._id;
       const { subject, chapterNo, completedQuestions } = req.body;
+      const userId = req.user?._id;
+      
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new AppError('用户不存在', 404);
+      }
 
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: '未授权访问'
+      // 初始化进度数据结构
+      if (!user.studyProgress) {
+        user.studyProgress = new Map();
+      }
+
+      if (!user.studyProgress.has(subject)) {
+        user.studyProgress.set(subject, new Map());
+      }
+
+      const subjectProgress = user.studyProgress.get(subject);
+      if (!subjectProgress) return;
+
+      if (!subjectProgress.has(chapterNo)) {
+        subjectProgress.set(chapterNo, {
+          completedQuestions: [],
+          lastStudyTime: new Date()
         });
       }
 
-      const user = await User.findByIdAndUpdate(
-        userId,
-        {
-          $set: {
-            [`studyProgress.${subject}.${chapterNo}`]: {
-              completedQuestions,
-              lastStudyTime: new Date()
-            }
-          }
-        },
-        { new: true }
-      );
+      const chapterProgress = subjectProgress.get(chapterNo);
+      if (!chapterProgress) return;
+
+      // 更新完成的题目和学习时间
+      chapterProgress.completedQuestions = [
+        ...new Set([...chapterProgress.completedQuestions, ...completedQuestions])
+      ];
+      chapterProgress.lastStudyTime = new Date();
+
+      await user.save();
 
       res.json({
         success: true,
-        data: user?.studyProgress
+        message: '学习进度已更新'
       });
     } catch (error) {
       next(error);
@@ -196,29 +285,62 @@ class UserController {
   // 获取学习进度
   async getStudyProgress(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const userId = req.user?._id;
       const { subject } = req.params;
-
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: '未授权访问'
-        });
-      }
+      const userId = req.user?._id;
 
       const user = await User.findById(userId);
       if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: '用户不存在'
+        throw new AppError('用户不存在', 404);
+      }
+
+      if (!user.studyProgress) {
+        return res.json({
+          success: true,
+          data: {
+            progress: {}
+          }
         });
       }
 
-      const progress = subject ? user.studyProgress?.get(subject) : user.studyProgress;
+      if (subject) {
+        const subjectProgress = user.studyProgress.get(subject);
+        if (!subjectProgress) {
+          return res.json({
+            success: true,
+            data: {
+              progress: {}
+            }
+          });
+        }
+
+        const formattedProgress: Record<string, any> = {};
+        subjectProgress.forEach((value, key) => {
+          formattedProgress[key] = value;
+        });
+
+        return res.json({
+          success: true,
+          data: {
+            progress: formattedProgress
+          }
+        });
+      }
+
+      // 返回所有科目的学习进度
+      const formattedProgress: Record<string, any> = {};
+      user.studyProgress.forEach((subjectMap, subjectKey) => {
+        const subjectProgress: Record<string, any> = {};
+        subjectMap.forEach((value, key) => {
+          subjectProgress[key] = value;
+        });
+        formattedProgress[subjectKey] = subjectProgress;
+      });
 
       res.json({
         success: true,
-        data: progress || {}
+        data: {
+          progress: formattedProgress
+        }
       });
     } catch (error) {
       next(error);

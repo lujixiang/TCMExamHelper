@@ -100,7 +100,7 @@ export class PracticeService {
       throw new Error('题目不存在');
     }
 
-    const isCorrect = question.answer === answer;
+    const isCorrect = question.correctAnswer === answer;
 
     if (!isCorrect) {
       const existingWrongQuestion = await WrongQuestion.findOne({
@@ -111,7 +111,7 @@ export class PracticeService {
       if (existingWrongQuestion) {
         await WrongQuestion.findByIdAndUpdate(existingWrongQuestion._id, {
           $inc: { wrongCount: 1 },
-          lastWrongTime: new Date(),
+          lastWrongDate: new Date(),
           isResolved: false
         });
       } else {
@@ -121,7 +121,7 @@ export class PracticeService {
           subject: question.subject,
           chapterNo: question.chapterNo || 0,
           wrongCount: 1,
-          lastWrongTime: new Date(),
+          lastWrongDate: new Date(),
           isResolved: false
         });
       }
@@ -129,7 +129,7 @@ export class PracticeService {
 
     return {
       isCorrect,
-      correctAnswer: question.answer,
+      correctAnswer: question.correctAnswer,
       explanation: question.explanation
     };
   }

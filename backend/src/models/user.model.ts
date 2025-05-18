@@ -19,16 +19,16 @@ export interface IUser extends Document {
   role: string;
   isActive: boolean;
   profile: {
-    nickname: string;
-    avatar: string;
+    nickname?: string;
+    avatar?: string;
   };
   stats: {
     totalQuestions: number;
     correctCount: number;
     wrongCount: number;
     streak: number;
-    lastLoginDate: Date;
-    lastAnswerDate: Date;
+    lastLoginAt: Date;
+    lastAnswerAt: Date;
   };
   studyProgress: Map<string, Map<string, StudyProgress>>;
   lastLoginAt: Date;
@@ -42,7 +42,7 @@ interface IUserDocument extends IUser {
   password: string;
 }
 
-const UserSchema = new Schema({
+const UserSchema = new Schema<IUser>({
   username: {
     type: String,
     required: true,
@@ -98,12 +98,13 @@ const UserSchema = new Schema({
       type: Number,
       default: 0
     },
-    lastLoginDate: {
+    lastLoginAt: {
       type: Date,
       default: Date.now
     },
-    lastAnswerDate: {
-      type: Date
+    lastAnswerAt: {
+      type: Date,
+      default: Date.now
     }
   },
   studyProgress: {
@@ -138,14 +139,16 @@ const UserSchema = new Schema({
 
 // 密码加密中间件
 UserSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
+  if (!this.isModified('password')) {
+    return next();
+  }
+
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
     next();
-  } catch (error: any) {
-    next(error);
+  } catch (error) {
+    next(error as Error);
   }
 });
 

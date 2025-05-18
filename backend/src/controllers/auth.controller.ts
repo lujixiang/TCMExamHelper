@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { IUser, User } from '../models/user.model';
-import { AuthRequest, jwtConfig } from '../middleware/auth.middleware';
-import { Types } from 'mongoose';
+import jwt, { SignOptions } from 'jsonwebtoken';
+import { User, IUser } from '../models/user.model';
+import { AuthRequest } from '../types/express';
+import { config } from '../config/config';
+import { AppError } from '../utils/error';
+import bcrypt from 'bcryptjs';
 
 // 用户响应接口
 interface UserResponse {
@@ -19,13 +21,14 @@ interface UserResponse {
     correctCount: number;
     wrongCount: number;
     streak: number;
-    lastLoginDate?: Date;
+    lastLoginAt?: Date;
+    lastAnswerAt?: Date;
   };
 }
 
 // 格式化用户响应
 const formatUserResponse = (user: IUser): UserResponse => ({
-  _id: (user._id as Types.ObjectId).toString(),
+  _id: user._id.toString(),
   username: user.username,
   email: user.email,
   role: user.role,
@@ -35,42 +38,68 @@ const formatUserResponse = (user: IUser): UserResponse => ({
     correctCount: user.stats.correctCount,
     wrongCount: user.stats.wrongCount,
     streak: user.stats.streak,
-    lastLoginDate: user.stats.lastLoginDate
+    lastLoginAt: user.stats.lastLoginAt,
+    lastAnswerAt: user.stats.lastAnswerAt
   }
 });
 
-export const authController = {
+// 生成token的辅助函数，将config.jwtExpiresIn转换为数字类型
+const getJwtExpiresIn = (): number => {
+  const expiresIn = config.jwtExpiresIn;
+  if (typeof expiresIn === 'number') {
+    return expiresIn;
+  }
+  
+  // 解析字符串格式的过期时间，如 "7d", "24h", "60m" 等
+  const matchDays = expiresIn.match(/^(\d+)d$/);
+  if (matchDays) {
+    return parseInt(matchDays[1]) * 24 * 60 * 60; // 转换为秒
+  }
+  
+  const matchHours = expiresIn.match(/^(\d+)h$/);
+  if (matchHours) {
+    return parseInt(matchHours[1]) * 60 * 60; // 转换为秒
+  }
+  
+  const matchMinutes = expiresIn.match(/^(\d+)m$/);
+  if (matchMinutes) {
+    return parseInt(matchMinutes[1]) * 60; // 转换为秒
+  }
+  
+  const matchSeconds = expiresIn.match(/^(\d+)s$/);
+  if (matchSeconds) {
+    return parseInt(matchSeconds[1]); // 秒
+  }
+  
+  // 默认为7天
+  return 7 * 24 * 60 * 60;
+};
+
+class AuthController {
   // 用户注册
-  register: async (req: Request, res: Response, next: NextFunction) => {
+  async register(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { username, email, password } = req.body;
 
       // 检查用户是否已存在
-      const existingUser = await User.findOne({
-        $or: [{ username }, { email }]
-      });
-
+      const existingUser = await User.findOne({ $or: [{ email }, { username }] });
       if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: '用户名或邮箱已被注册'
-        });
+        throw new AppError('用户名或邮箱已存在', 400);
       }
 
       // 创建新用户
-      const user = new User({
+      const user = await User.create({
         username,
         email,
-        password
+        password,
+        name: username // 默认使用用户名作为姓名
       });
 
-      await user.save();
-
-      // 生成token
+      // 生成 JWT
       const token = jwt.sign(
-        { _id: user._id.toString() },
-        jwtConfig.secret,
-        jwtConfig.options
+        { id: user._id.toString() },
+        config.jwtSecret,
+        { expiresIn: getJwtExpiresIn() }
       );
 
       res.status(201).json({
@@ -83,155 +112,89 @@ export const authController = {
     } catch (error) {
       next(error);
     }
-  },
+  }
 
   // 用户登录
-  login: async (req: Request, res: Response, next: NextFunction) => {
+  async login(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const { username, password } = req.body;
-
-      // 输入验证
-      if (!username || !password) {
-        return res.status(400).json({
-          success: false,
-          message: '请提供用户名和密码'
-        });
-      }
+      const { email, password } = req.body;
 
       // 查找用户
-      const user = await User.findOne({
-        $or: [
-          { username },
-          { email: username } // 支持使用邮箱登录
-        ]
-      }).select('+password'); // 确保包含密码字段
-
+      const user = await User.findOne({ email }).select('+password');
       if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: '用户名或密码错误'
-        });
+        throw new AppError('用户不存在', 401);
       }
-
-      console.log('Found user:', {
-        id: user._id,
-        username: user.username,
-        hasPassword: !!user.password
-      });
 
       // 验证密码
       const isMatch = await user.comparePassword(password);
-      console.log('Password match result:', isMatch);
-
       if (!isMatch) {
-        return res.status(401).json({
-          success: false,
-          message: '用户名或密码错误'
-        });
+        throw new AppError('密码错误', 401);
       }
 
-      // 更新最后登录时间
-      user.stats.lastLoginDate = new Date();
-      await user.save();
-
-      // 生成token
+      // 生成 JWT
       const token = jwt.sign(
-        { _id: user._id.toString() },
-        jwtConfig.secret,
-        jwtConfig.options
+        { id: user._id.toString() },
+        config.jwtSecret,
+        { expiresIn: getJwtExpiresIn() }
       );
-
-      // 移除密码字段
-      const userResponse = user.toObject();
-      delete userResponse.password;
 
       res.json({
         success: true,
         data: {
           token,
-          user: formatUserResponse(userResponse)
-        }
-      });
-    } catch (error) {
-      console.error('Login error:', error);
-      next(error);
-    }
-  },
-
-  // 获取当前用户信息
-  getCurrentUser: async (req: AuthRequest, res: Response, next: NextFunction) => {
-    try {
-      const user = await User.findById(req.user?._id);
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: '用户不存在'
-        });
-      }
-
-      res.json({
-        success: true,
-        data: {
           user: formatUserResponse(user)
         }
       });
     } catch (error) {
       next(error);
     }
-  },
+  }
 
-  // 更新用户信息
-  updateProfile: async (req: AuthRequest, res: Response, next: NextFunction) => {
+  // 刷新令牌
+  async refreshToken(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const { nickname, avatar } = req.body;
-      
-      const user = await User.findByIdAndUpdate(
-        req.user?._id,
-        {
-          'profile.nickname': nickname,
-          'profile.avatar': avatar
-        },
-        { new: true }
+      const { refreshToken } = req.body;
+      if (!refreshToken) {
+        throw new AppError('未提供刷新令牌', 400);
+      }
+
+      const decoded = jwt.verify(refreshToken, config.jwtSecret) as { id: string };
+      const user = await User.findById(decoded.id);
+
+      if (!user) {
+        throw new AppError('用户不存在', 401);
+      }
+
+      const token = jwt.sign(
+        { id: user._id.toString() },
+        config.jwtSecret,
+        { expiresIn: getJwtExpiresIn() }
       );
 
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: '用户不存在'
-        });
-      }
-
       res.json({
         success: true,
-        data: {
-          user: formatUserResponse(user)
-        }
+        data: { token }
       });
     } catch (error) {
       next(error);
     }
-  },
+  }
 
   // 修改密码
-  changePassword: async (req: AuthRequest, res: Response, next: NextFunction) => {
+  async changePassword(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { currentPassword, newPassword } = req.body;
+      const userId = req.user?._id;
 
-      const user = await User.findById(req.user?._id).select('+password');
+      const user = await User.findById(userId).select('+password');
       if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: '用户不存在'
-        });
+        throw new AppError('用户不存在', 401);
       }
 
       // 验证当前密码
       const isMatch = await user.comparePassword(currentPassword);
       if (!isMatch) {
-        return res.status(401).json({
-          success: false,
-          message: '当前密码错误'
-        });
+        throw new AppError('当前密码错误', 401);
       }
 
       // 更新密码
@@ -245,5 +208,150 @@ export const authController = {
     } catch (error) {
       next(error);
     }
+  }
+
+  // 重置密码请求
+  async resetPasswordRequest(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      const user = await User.findOne({ email });
+
+      if (!user) {
+        throw new AppError('用户不存在', 404);
+      }
+
+      // TODO: 发送重置密码邮件
+      
+      res.json({
+        success: true,
+        message: '重置密码链接已发送到您的邮箱'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // 重置密码
+  async resetPassword(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { token, newPassword } = req.body;
+      
+      const decoded = jwt.verify(token, config.jwtSecret) as { id: string };
+      const user = await User.findById(decoded.id);
+
+      if (!user) {
+        throw new AppError('无效的重置令牌', 400);
+      }
+
+      user.password = newPassword;
+      await user.save();
+
+      res.json({
+        success: true,
+        message: '密码重置成功'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // 获取当前用户信息
+  async getCurrentUser(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?._id;
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new AppError('用户不存在', 404);
+      }
+
+      res.json({
+        success: true,
+        data: {
+          user: formatUserResponse(user)
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // 更新用户资料
+  async updateProfile(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?._id;
+      const user = await User.findByIdAndUpdate(
+        userId,
+        {
+          $set: {
+            'profile.nickname': req.body.nickname,
+            'profile.avatar': req.body.avatar
+          }
+        },
+        { new: true }
+      );
+
+      if (!user) {
+        throw new AppError('用户不存在', 404);
+      }
+
+      res.json({
+        success: true,
+        data: {
+          user: formatUserResponse(user)
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+
+export const authController = new AuthController();
+
+// 获取当前用户信息
+export const getCurrentUser = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const user = await User.findById(req.user?.id);
+    if (!user) {
+      throw new AppError('用户不存在', 404);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        user: formatUserResponse(user)
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 更新用户资料
+export const updateProfile = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user?.id,
+      {
+        $set: {
+          'profile.nickname': req.body.nickname,
+          'profile.avatar': req.body.avatar
+        }
+      },
+      { new: true }
+    );
+
+    if (!user) {
+      throw new AppError('用户不存在', 404);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        user: formatUserResponse(user)
+      }
+    });
+  } catch (error) {
+    next(error);
   }
 }; 

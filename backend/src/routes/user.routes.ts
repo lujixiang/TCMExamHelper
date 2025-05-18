@@ -1,31 +1,28 @@
-import { Router } from 'express';
-import { auth } from '../middleware/auth.middleware';
-import * as userController from '../controllers/user.controller';
+import { Router } from '../types/express';
+import { authMiddleware } from '../middleware/auth.middleware';
+import { userController } from '../controllers/user.controller';
 
 const router = Router();
 
-// 所有路由都需要认证
-router.use(auth);
-
+// 公开路由
 router.post('/register', userController.register);
 router.post('/login', userController.login);
+
+// 需要认证的路由
+router.use(authMiddleware);
 router.get('/me', userController.getCurrentUser);
 router.put('/profile', userController.updateProfile);
 router.get('/:id', userController.getUserById);
 
-// 更新密码
+// 密码管理
 router.put('/password', userController.updatePassword);
 
-// 获取学习统计
+// 学习统计
 router.get('/stats', userController.getStudyStats);
-
-// 获取学习统计详情
 router.get('/stats/detail', userController.getStudyStatsDetail);
 
-// 更新学习进度
+// 学习进度
 router.put('/study-progress', userController.updateStudyProgress);
-
-// 获取学习进度
 router.get('/study-progress/:subject?', userController.getStudyProgress);
 
-export default router; 
+export { router as userRoutes }; 
